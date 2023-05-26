@@ -20,5 +20,7 @@ RUN pip install -r requirements.txt
 # Copying project files into the container
 COPY . .
 
+RUN alembic upgrade head
+
 # Defining the command to start the FastAPI server
 CMD uvicorn app.main:app --host 0.0.0.0 --port 8000
