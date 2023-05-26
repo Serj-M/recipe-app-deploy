@@ -14,7 +14,7 @@
     @update:options="loadItems">
     <template v-slot:top>
       <v-toolbar flat>
-        <v-toolbar-title class="title-table">titleTable</v-toolbar-title>
+        <v-toolbar-title class="title-table">{{titleTable}}</v-toolbar-title>
         <v-divider class="mx-4" inset vertical></v-divider>
         <v-spacer></v-spacer>
         <v-dialog v-model="dialogAction" max-width="1000px">
