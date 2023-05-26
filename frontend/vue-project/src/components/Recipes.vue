@@ -1,5 +1,5 @@
 <template>
-  <v-alert v-if="isDeleted" type="info" variant="outlined" dismissible>
+  <v-alert v-if="isDeleted" type="info" dismissible>
     Recipe successfully deleted
   </v-alert>
   <v-data-table-server 
@@ -227,9 +227,11 @@ export default {
           search: { tags: tagsIds, ingredients: this.ingredients }
         }
         const res = await api.post('/recipes/v1/items', this.paramsLoadItems)
-        res.data.items.forEach(el => el.tags = el.tags.join(', '))
-        this.serverItems = res.data.items
-        this.totalItems = res.data.totalItems
+        this.$nextTick(() => {
+          res.data.items.forEach(el => el.tags = el.tags.join(', '))
+          this.serverItems = res.data.items
+          this.totalItems = res.data.totalItems
+        })
         this.loading = false
       } 
       catch(error) {
@@ -253,9 +255,13 @@ export default {
     async deleteItemConfirm() {
       try {
         const res = await api.delete(`/recipes/v1/del/${this.editedItem.id}`)
-        // update recipes to reflect changes
-        await this.loadItems(this.paramsLoadItems)
-        this.closeDelete()
+        this.$nextTick(async () => {
+          // update recipes to reflect changes
+          await this.loadItems(this.paramsLoadItems)
+        })
+        this.$nextTick(() => {
+          this.closeDelete()
+        })
         this.deleteAlert()
       } catch (error) {
         console.error(error)
@@ -263,21 +269,21 @@ export default {
     },
 
     close() {
-      this.loading = false
-      this.dialogAction = false
       this.$nextTick(() => {
         this.editedItem = Object.assign({}, this.defaultItem)
         this.editedIndex = -1
       })
+      this.dialogAction = false
+      this.loading = false
     },
 
     closeDelete() {
-      this.loading = false
-      this.dialogDelete = false
       this.$nextTick(() => {
         this.editedItem = Object.assign({}, this.defaultItem)
         this.editedIndex = -1
       })
+      this.dialogDelete = false
+      this.loading = false
     },
 
     deleteAlert() {
@@ -304,9 +310,13 @@ export default {
       } catch (error) {
         console.error(error)
       }
-      // update recipes to reflect changes
-      await this.loadItems(this.paramsLoadItems)
-      this.close()
+      this.$nextTick(async () => {
+        // update recipes to reflect changes
+        await this.loadItems(this.paramsLoadItems)
+      })
+      this.$nextTick(() => {
+        this.close()
+      })
     },
 
     prepParams(params) {
