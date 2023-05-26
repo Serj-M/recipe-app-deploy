@@ -28,6 +28,6 @@ ________________________________________________________________________________
 
   Frontend: http://localhost:8087/
 
-  Backend:  http://localhost:8765
+  Backend:  https://recipes-backend-ns4l.onrender.com
 
-  Swagger:  http://localhost:8765/docs 
+  Swagger:  https://recipes-backend-ns4l.onrender.com/docs 
