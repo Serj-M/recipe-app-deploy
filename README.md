@@ -26,7 +26,7 @@ ________________________________________________________________________________
 
 **URLs:**
 
-  Frontend: http://localhost:8087/
+  Frontend: https://frontend-recipes.onrender.com/
 
   Backend:  https://recipes-backend-ns4l.onrender.com
 
