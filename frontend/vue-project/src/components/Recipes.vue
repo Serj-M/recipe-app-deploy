@@ -1,6 +1,9 @@
 <template>
-  <v-alert v-if="isDeleted" type="info" dismissible>
+  <v-alert v-if="isDeleted" type="info" variant="outlined" dismissible>
     Recipe successfully deleted
+  </v-alert>
+  <v-alert v-if="errorAPI" type="error" variant="outlined" dismissible>
+    {{ errorAPI }}
   </v-alert>
   <v-data-table-server 
     v-model:items-per-page="itemsPerPage" 
@@ -133,6 +136,7 @@ import api from '../api'
 
 export default {
   data: () => ({
+    errorAPI: '',
     titleTable: 'Recipes',
     numberRules: [
       value => /^\d+$/.test(value) || 'Enter the correct cooking time (integer only)',
@@ -178,7 +182,7 @@ export default {
 
   async created() {
     await this.loadHeaders()
-    await this.loadItems({})
+    await this.loadItems({}, true)
     const res = await api.get('/recipes/v1/tags')
     this.tagsJSON = res.data.tags
     this.tagsNames = this.tagsJSON.map(el => el.name)
@@ -216,7 +220,7 @@ export default {
       }
     },
 
-    async loadItems({ page=1, itemsPerPage=10, sortBy=[] }) {
+    async loadItems({ page=1, itemsPerPage=10, sortBy=[] }, cache=true) {
       this.loading = true
       try {
         const tagsIds = this.getTagsIds(this.tags)
@@ -226,17 +230,28 @@ export default {
           sortBy, 
           search: { tags: tagsIds, ingredients: this.ingredients }
         }
-        const res = await api.post('/recipes/v1/items', this.paramsLoadItems)
-        this.$nextTick(() => {
-          res.data.items.forEach(el => el.tags = el.tags.join(', '))
-          this.serverItems = res.data.items
-          this.totalItems = res.data.totalItems
-        })
+        let res = null
+        if (cache) {
+          res = await api.post('/recipes/v1/items', this.paramsLoadItems)
+        } else {
+          res = await api.post('/recipes/v1/items_without_cache', this.paramsLoadItems)
+        }
+        res.data.items.forEach(el => el.tags = el.tags.join(', '))
+        this.serverItems = res.data.items
+        this.totalItems = res.data.totalItems
         this.loading = false
       } 
       catch(error) {
         this.loading = false
         console.error(error)
+        if (error?.response?.data.detail) {
+          this.errorAPI = error.response.data.detail
+        } else {
+          this.errorAPI = 'An error occurred while loading the item.'
+        }
+        setTimeout(() => {
+          this.errorAPI = ''
+        }, 2000)
       }
     },
 
@@ -255,35 +270,37 @@ export default {
     async deleteItemConfirm() {
       try {
         const res = await api.delete(`/recipes/v1/del/${this.editedItem.id}`)
-        this.$nextTick(async () => {
-          // update recipes to reflect changes
-          await this.loadItems(this.paramsLoadItems)
-        })
-        this.$nextTick(() => {
-          this.closeDelete()
-        })
-        this.deleteAlert()
+        this.closeDelete()
+        // this.deleteAlert()
       } catch (error) {
         console.error(error)
+        if (error?.response?.data.detail) {
+          this.errorAPI = error.response.data.detail
+        } else {
+          this.errorAPI = 'An error occurred while deleting the item.'
+        }
+        setTimeout(() => {
+          this.errorAPI = ''
+        }, 2000)
+        // update recipes to reflect changes
       }
+      await this.loadItems(this.paramsLoadItems, false)
     },
 
     close() {
+      this.dialogAction = false
       this.$nextTick(() => {
         this.editedItem = Object.assign({}, this.defaultItem)
         this.editedIndex = -1
       })
-      this.dialogAction = false
-      this.loading = false
     },
 
     closeDelete() {
+      this.dialogDelete = false
       this.$nextTick(() => {
         this.editedItem = Object.assign({}, this.defaultItem)
         this.editedIndex = -1
       })
-      this.dialogDelete = false
-      this.loading = false
     },
 
     deleteAlert() {
@@ -309,19 +326,24 @@ export default {
         }
       } catch (error) {
         console.error(error)
+        if (error?.response?.data.detail) {
+          this.errorAPI = error.response.data.detail
+        } else {
+          this.errorAPI = this.editedIndex > -1 ? 'An error occurred while editing the item.' : 'An error occurred while adding the item.'
+        }
+        setTimeout(() => {
+          this.errorAPI = ''
+        }, 2000)
       }
-      this.$nextTick(async () => {
-        // update recipes to reflect changes
-        await this.loadItems(this.paramsLoadItems)
-      })
-      this.$nextTick(() => {
-        this.close()
-      })
+      this.close()
+      // update recipes to reflect changes
+      await this.loadItems(this.paramsLoadItems, false)
     },
 
     prepParams(params) {
-      params.tags = this.getTagsIds(params.tags)
-      return params
+      const result = Object.assign({}, params)
+      result.tags = this.getTagsIds(params.tags)
+      return result
     },
 
     getTagsIds(tags) {
